@@ -131,7 +131,7 @@ In `index.html`, find the block that starts `const SYNC = {`. Change the three v
 
 Both of those keys are public by design, so they are allowed in this file. The private VAPID key is not.
 
-Show Jacqui the before and after. When she says yes, commit and push to `main`.
+Show Jacqui the before and after. When she says yes, commit and push to `master`.
 
 Check: wait two minutes, then load https://wholewomancollective.github.io/come-home-to-each-other/ and confirm the page source contains `iqmfbhtusygvdxynfzzg.supabase.co` and no longer contains `jiquevvzrdavgqonvvug`.
 

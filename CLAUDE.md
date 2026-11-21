@@ -7,7 +7,7 @@ This is Jacqui McGregor's mother-daughter app, part of her business Whole Woman 
 - Before you start any change, get the latest version: `git pull`.
 - Make the change she asked for and nothing else. If her request is unclear, ask one short question.
 - Show her what changed in plain words before publishing.
-- Publish only after she says yes. Commit with a short plain message, then `git push` to `main`. The live app updates one to two minutes later.
+- Publish only after she says yes. Commit with a short plain message, then `git push` to `master`. The live app updates one to two minutes later.
 - After publishing, load the live app and confirm the change is there.
 - Never delete a file without asking her first.
 - If a change looks wrong: `git revert` the last commit and push, then tell her the app is back to how it was.
@@ -24,7 +24,7 @@ One page, plain HTML, no build step.
 | `manifest.webmanifest` | Lets the app be added to a phone's Home Screen. It deliberately has no `start_url`. Do not add one: it would break the invite link on iPhones. |
 | `_backend/` | Set-up files for the app's engine in Supabase. Not part of the live app. |
 
-Live at https://wholewomancollective.github.io/come-home-to-each-other/. Hosted free on GitHub Pages from the `main` branch of `wholewomancollective/come-home-to-each-other`. Everything in this folder is public on the internet.
+Live at https://wholewomancollective.github.io/come-home-to-each-other/. Hosted free on GitHub Pages from the `master` branch of `wholewomancollective/come-home-to-each-other`. Everything in this folder is public on the internet.
 
 ## How it works
 

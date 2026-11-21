@@ -92,10 +92,24 @@ language plpgsql security definer set search_path = public as $$
 declare pid uuid := chte_pair_id(p_token);
 begin
   if pid is null then return false; end if;
+  if p_role is null or p_role not in ('mum','daughter') then return false; end if;
+  -- Only the real browser notification services are accepted, so a saved address can never
+  -- point the notification function at some other website.
+  if p_endpoint is null or char_length(p_endpoint) > 1000 or p_endpoint !~
+     '^https://(fcm\.googleapis\.com|android\.googleapis\.com|([a-z0-9-]+\.)+google\.com|([a-z0-9-]+\.)*push\.services\.mozilla\.com|([a-z0-9-]+\.)*notify\.windows\.com|([a-z0-9-]+\.)*push\.apple\.com)/'
+  then return false; end if;
+  if coalesce(p_p256dh,'') = '' or coalesce(p_auth,'') = '' or char_length(p_p256dh) > 200 or char_length(p_auth) > 100 then
+    return false;
+  end if;
+  -- A phone's subscription can move to another pair only if the caller proves it is the same
+  -- phone (same subscription keys). Knowing the address alone is not enough.
   insert into chte_push_subs (endpoint, pair_id, role, p256dh, auth)
   values (p_endpoint, pid, p_role, p_p256dh, p_auth)
-  on conflict (endpoint) do update set pair_id = excluded.pair_id, role = excluded.role, p256dh = excluded.p256dh, auth = excluded.auth;
-  return true;
+  on conflict (endpoint) do update
+    set pair_id = excluded.pair_id, role = excluded.role, p256dh = excluded.p256dh, auth = excluded.auth
+    where chte_push_subs.pair_id = excluded.pair_id
+       or (chte_push_subs.p256dh = excluded.p256dh and chte_push_subs.auth = excluded.auth);
+  return found;
 end $$;
 
 -- "Start over": removes the pair, every word and every notification subscription, for both phones.

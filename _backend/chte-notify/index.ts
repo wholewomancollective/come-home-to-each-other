@@ -38,6 +38,25 @@ function fromOurApp(req: Request): boolean {
   return !!k && publicKeys().includes(k);
 }
 
+// Notifications are only ever sent to the real browser notification services.
+const PUSH_HOSTS = [
+  /^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /\.google\.com$/,
+  /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/, /(^|\.)push\.apple\.com$/,
+];
+function isPushEndpoint(endpoint: unknown): boolean {
+  if (typeof endpoint !== "string" || endpoint.length > 1000) return false;
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === "https:" && !u.port && !u.username && !u.password && PUSH_HOSTS.some((r) => r.test(u.hostname));
+  } catch { return false; }
+}
+// The link a notification opens must stay inside the app: "./..." or "?..." only.
+function safeUrl(v: unknown): string {
+  if (typeof v !== "string" || v.length > 300) return "./";
+  if (!/^(\.\/|\?)/.test(v) || v.includes("//") || v.includes("\\") || v.includes("..") || /[\u0000-\u001f]/.test(v)) return "./";
+  return v;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -60,20 +79,19 @@ Deno.serve(async (req) => {
   const payload = JSON.stringify({
     title: "Come Home to Each Other",
     body: `${fromName} has placed ${part === "morning" ? "this morning's" : "tonight's"} words on the bridge`,
-    url: typeof body.url === "string" ? body.url.slice(0, 300) : "./",
+    url: safeUrl(body.url),
   });
 
   let sent = 0;
-  const results: number[] = [];
   for (const s of subs ?? []) {
+    if (!isPushEndpoint(s.endpoint)) continue; // never call an address that is not a notification service
     try {
-      const r = await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 12 });
-      results.push(r.statusCode); sent++;
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 12 });
+      sent++;
     } catch (err) {
       const code = (err as { statusCode?: number }).statusCode ?? 0;
-      results.push(code);
       if (code === 404 || code === 410) await db.from("chte_push_subs").delete().eq("endpoint", s.endpoint); // phone unsubscribed
     }
   }
-  return json({ subscribers: subs?.length ?? 0, sent, results });
+  return json({ subscribers: subs?.length ?? 0, sent });
 });
